@@ -1,15 +1,12 @@
 import React from 'react';
-import { encryptMessage, decryptMessage } from "../../lib/crypto";
 import { useEffect, useRef, useState } from "react";
 import "./chat.css";
 import EmojiPicker from "emoji-picker-react";
 import {
   arrayUnion,
-  collection,
   doc,
   getDoc,
   onSnapshot,
-  serverTimestamp,
   updateDoc,
 } from "firebase/firestore";
 import { db } from "../../lib/firebase";
@@ -17,6 +14,7 @@ import { useChatStore } from "../../lib/chatStore";
 import { useUserStore } from "../../lib/userStore";
 import upload from "../../lib/upload";
 import { format } from "timeago.js";
+import { encryptMessage,decryptMessage } from '../../lib/encryption';
 
 const Chat = () => {
   const [chat, setChat] = useState(null);
@@ -39,7 +37,28 @@ const Chat = () => {
     }
   }, [chat?.messages]);
 
-
+  useEffect(() => {
+    if (!chatId) return;
+    const unSub = onSnapshot(doc(db, "chats", chatId), (res) => {
+      const chatData = res.data();
+  
+      // Decrypt messages after receiving them
+      const secretKey = "user-specific-secret-key";  // Ensure you use the correct key for decryption
+      const decryptedMessages = chatData.messages.map((message) => {
+        return {
+          ...message,
+          text: decryptMessage(message.text, secretKey),
+        };
+      });
+  
+      setChat({ ...chatData, messages: decryptedMessages });
+    });
+  
+    return () => {
+      unSub();
+    };
+  }, [chatId]);
+  
 
   const handleEmoji = (e) => {
     setText((prev) => prev + e.emoji);
@@ -65,13 +84,13 @@ const Chat = () => {
         imgUrl = await upload(img.file);
       }
 
-      // Encrypt the message
-      const encryptedText = await encryptMessage(text, user.publicKey);
+      const secretKey = "user-specific-secret-key";  // You should generate/store this securely
+      const encryptedText = encryptMessage(text, secretKey);
 
       await updateDoc(doc(db, "chats", chatId), {
         messages: arrayUnion({
           senderId: currentUser.id,
-          text: encryptedText,
+          text: encryptedText,  
           createdAt: new Date(),
           ...(imgUrl && { img: imgUrl }),
         }),
@@ -102,8 +121,6 @@ const Chat = () => {
       });
     } catch (err) {
       console.log(err);
-      console.log("User public key:", user.publicKey);
-      console.log("Current user private key:", currentUser.privateKey);
     } finally {
       setImg({
         file: null,
@@ -113,29 +130,6 @@ const Chat = () => {
       setText("");
     }
   };
-
-  useEffect(() => {
-    if (!chatId) return;
-    const unSub = onSnapshot(doc(db, "chats", chatId), async (res) => {
-      const chatData = res.data();
-      if (chatData?.messages) {
-        // Decrypt messages
-        const decryptedMessages = await Promise.all(chatData.messages.map(async (message) => {
-          if (message.text) {
-            const decryptedText = await decryptMessage(message.text, currentUser.privateKey);
-            return { ...message, text: decryptedText };
-          }
-          return message;
-        }));
-        setChat({ ...chatData, messages: decryptedMessages });
-      }
-    });
-  
-    return () => {
-      unSub();
-    };
-  }, [chatId]);
-
 
   return (
     <div className="chat">

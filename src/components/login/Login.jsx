@@ -1,4 +1,3 @@
-import { generateKeyPair } from "../../lib/crypto";
 import React from 'react';
 import { useState } from "react";
 import "./login.css";
@@ -40,12 +39,6 @@ const Login = () => {
       return toast.warn("Please enter inputs!");
     if (!avatar.file) return toast.warn("Please upload an avatar!");
 
-  /*
-    // Generate key pair
-    const { publicKey, secretKey } = generateKeyPair();
-
-  */
-
     // VALIDATE UNIQUE USERNAME
     const usersRef = collection(db, "users");
     const q = query(usersRef, where("username", "==", username));
@@ -65,8 +58,6 @@ const Login = () => {
         avatar: imgUrl,
         id: res.user.uid,
         blocked: [],
-        /*publicKey: publicKey, // Store public key
-        secretKey: secretKey, // Store secret key */
       });
 
       await setDoc(doc(db, "userchats", res.user.uid), {

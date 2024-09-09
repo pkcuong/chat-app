@@ -69,49 +69,6 @@ const ChatList = () => {
     c.user.username.toLowerCase().includes(input.toLowerCase())
   );
 
-
-  const handleAdd = async () => {
-    const chatRef = collection(db, "chats");
-    const userChatsRef = collection(db, "userchats");
-
-    // Generate keys for the new chat
-    const { publicKey, secretKey } = generateKeyPair();
-
-    try {
-        const newChatRef = doc(chatRef);
-
-        await setDoc(newChatRef, {
-            createdAt: serverTimestamp(),
-            messages: [],
-            publicKeys: {
-                [currentUser.id]: publicKey,
-                [user.id]: user.publicKey, // Retrieve the public key of the other user
-            },
-        });
-
-        await updateDoc(doc(userChatsRef, user.id), {
-            chats: arrayUnion({
-                chatId: newChatRef.id,
-                lastMessage: "",
-                receiverId: currentUser.id,
-                updatedAt: Date.now(),
-            }),
-        });
-
-        await updateDoc(doc(userChatsRef, currentUser.id), {
-            chats: arrayUnion({
-                chatId: newChatRef.id,
-                lastMessage: "",
-                receiverId: user.id,
-                updatedAt: Date.now(),
-            }),
-        });
-    } catch (err) {
-        console.log(err);
-    }
-    };
-
-    
   return (
     <div className="chatList">
       <div className="search">
