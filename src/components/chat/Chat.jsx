@@ -15,6 +15,9 @@ import { useUserStore } from "../../lib/userStore";
 import upload from "../../lib/upload";
 import { format } from "timeago.js";
 import { encryptMessage,decryptMessage } from '../../lib/encryption';
+import { x3dhKeyExchange } from '../../utils/x3dhUtils'; 
+import naclUtil from 'tweetnacl-util'; 
+import { nacl } from 'tweetnacl';
 
 const Chat = () => {
   const [chat, setChat] = useState(null);
@@ -42,8 +45,8 @@ const Chat = () => {
     const unSub = onSnapshot(doc(db, "chats", chatId), (res) => {
       const chatData = res.data();
   
-      // Decrypt messages after receiving them
-      const secretKey = "user-specific-secret-key";  // Ensure you use the correct key for decryption
+      
+      const secretKey = "7068616D6B68756F6E6763756F6E673239313032303033";  
       const decryptedMessages = chatData.messages.map((message) => {
         return {
           ...message,
@@ -84,7 +87,7 @@ const Chat = () => {
         imgUrl = await upload(img.file);
       }
 
-      const secretKey = "user-specific-secret-key";  // You should generate/store this securely
+      const secretKey = "7068616D6B68756F6E6763756F6E673239313032303033";  
       const encryptedText = encryptMessage(text, secretKey);
 
       await updateDoc(doc(db, "chats", chatId), {
@@ -138,7 +141,7 @@ const Chat = () => {
           <img src={user?.avatar || "./avatar.png"} alt="" />
           <div className="texts">
             <span>{user?.username}</span>
-            <p>Now that we're alone</p>
+            
           </div>
         </div>
         <div className="icons">

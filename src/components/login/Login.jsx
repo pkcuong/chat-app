@@ -9,6 +9,13 @@ import {
 import { auth, db } from "../../lib/firebase";
 import { doc, setDoc, collection, query, where, getDocs } from "firebase/firestore";
 import upload from "../../lib/upload";
+import {
+  generateIdentityKeyPair,
+  generateSignedPrekey,
+  generateOneTimePrekey
+} from '../../utils/x3dhUtils';
+import naclUtil from 'tweetnacl-util';
+import { nacl } from 'tweetnacl';
 
 const Login = () => {
   const [avatar, setAvatar] = useState({
@@ -49,6 +56,15 @@ const Login = () => {
 
     try {
       const res = await createUserWithEmailAndPassword(auth, email, password);
+      
+      const identityKeyPair = generateIdentityKeyPair();
+      const signedPrekey = generateSignedPrekey(identityKeyPair);
+      const oneTimePrekeys = generateOneTimePrekey(10);
+
+    console.log("Identity Private Key:", naclUtil.encodeBase64(identityKeyPair.secretKey));
+    console.log("Signed Prekey Private Key:", naclUtil.encodeBase64(signedPrekey.secretKey));
+    console.log("One-Time Prekey Private Keys:", oneTimePrekeys.map((key) => naclUtil.encodeBase64(key.secretKey)));
+
 
       const imgUrl = await upload(avatar.file);
       
@@ -58,6 +74,16 @@ const Login = () => {
         avatar: imgUrl,
         id: res.user.uid,
         blocked: [],
+        identityKey: {
+          publicKey: naclUtil.encodeBase64(identityKeyPair.publicKey),
+      },
+      signedPrekey: {
+          publicKey: naclUtil.encodeBase64(signedPrekey.publicKey),
+          signature: naclUtil.encodeBase64(signedPrekey.signature),
+      },
+      oneTimePrekeys: oneTimePrekeys.map((key) =>
+          naclUtil.encodeBase64(key.publicKey)
+      ),  
       });
 
       await setDoc(doc(db, "userchats", res.user.uid), {
